@@ -1,6 +1,6 @@
-title: game title
-description: game description
-author: you
+title: Jumpy Squirrel
+description: Squirrels can fly.
+author: ThePythonator
 splash:
   file: assets/no-image.png
 icon:
