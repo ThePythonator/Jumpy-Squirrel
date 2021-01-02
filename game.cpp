@@ -6,11 +6,25 @@
 
 #define SPRITE_SIZE 8
 
+#define PLAYER_X 32
+
+#define JUMP_VELOCITY 150
+#define GRAVITY 450
+
+#define LOG_SPEED 30
+#define LOG_SPAWN 100
+#define LOG_SPAWN_MIN 60
+
+#define GAP_SIZE 3
+
 using namespace blit;
 
 struct Squirrel {
     float yPosition;
     float yVelocity;
+
+    bool alive;
+    bool started;
 
     int score;
 };
@@ -20,29 +34,45 @@ struct Log {
     int gapPosition;
 
     int images[SCREEN_HEIGHT / 8];
+
+    bool passed;
 };
+
+
+int state = 0;
+double dt;
+uint32_t lastTime = 0;
+
+float logSpawnTimer = 0;
+
+Squirrel player;
+std::vector<Log> logs;
+
+int get_min_y(int gapPosition) {
+    return (gapPosition - GAP_SIZE + 1) * SPRITE_SIZE;
+}
+
+int get_max_y(int gapPosition) {
+    return (gapPosition + GAP_SIZE) * SPRITE_SIZE;
+}
 
 Log generate_log() {
     Log log;
     
-    log.gapPosition = (rand() % ((SCREEN_HEIGHT / SPRITE_SIZE) - 4)) + 2; // need to check this is correct.... maybe bounds are not right
-
-    /*for (int x = 0; x < 100; x++) {
-        log.gapPosition = (rand() % ((SCREEN_HEIGHT / SPRITE_SIZE) - 4)) + 2;
-        printf("%d\n", log.gapPosition);
-    }*/
-    
+    log.gapPosition = (rand() % ((SCREEN_HEIGHT / SPRITE_SIZE) - (GAP_SIZE * 2))) + GAP_SIZE;
 
     log.xPosition = SCREEN_WIDTH + SPRITE_SIZE;
 
+    log.passed = false;
+
     for (int i = 0; i < (SCREEN_HEIGHT / SPRITE_SIZE); i++) {
-        if (i == log.gapPosition - 2) {
+        if (i == log.gapPosition - GAP_SIZE) {
             log.images[i] = 2;
         }
-        else if (i == log.gapPosition + 2) {
+        else if (i == log.gapPosition + GAP_SIZE) {
             log.images[i] = 0;
         }
-        else if (i > log.gapPosition - 2 && i < log.gapPosition + 2) {
+        else if (i > log.gapPosition - GAP_SIZE && i < log.gapPosition + GAP_SIZE) {
             log.images[i] = -1;
         }
         else {
@@ -52,11 +82,17 @@ Log generate_log() {
             else {
                 log.images[i] = 4;
             }
-            
         }
     }
 
     return log;
+}
+
+void render_player(Squirrel player) {
+    int index = 10; // need to get animation frame + 10
+
+    //screen.sprite(index, Point(PLAYER_X, player.yPosition));
+    screen.rectangle(Rect(PLAYER_X - SPRITE_SIZE / 2, player.yPosition - SPRITE_SIZE / 2, 8, 8));
 }
 
 void render_log(Log log) {
@@ -68,6 +104,17 @@ void render_log(Log log) {
             screen.sprite(index + 1, Point(log.xPosition, i * SPRITE_SIZE));
         }
     }
+}
+
+void start_game() {
+    //player.alive = true;
+    player.yPosition = SCREEN_HEIGHT / 2;
+    player.yVelocity = 0;
+    player.started = false;
+    player.score = 0;
+    player.alive = true;
+    logSpawnTimer = 0;
+    logs.clear();
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -93,18 +140,22 @@ void render(uint32_t time) {
     // clear the screen -- screen is a reference to the frame buffer and can be used to draw all things with the 32blit
     screen.clear();
 
-    // draw some text at the top of the screen
     screen.alpha = 255;
     screen.mask = nullptr;
     screen.pen = Pen(255, 255, 255);
 
-    static Log log1 = generate_log();
-    static Log log2 = generate_log();
-    log1.xPosition = 60;
-    log2.xPosition = 100;
+    if (state == 0) {
 
-    render_log(log1);
-    render_log(log2);
+    }
+    else if (state == 1 || state == 2) {
+        for (int i = 0; i < logs.size(); i++) {
+            render_log(logs.at(i));
+        }
+
+        render_player(player);
+
+        screen.text(std::to_string(player.score), minimal_font, Point(SCREEN_WIDTH / 2, 8), true, TextAlign::center_center);
+    }
 
     screen.pen = Pen(0, 0, 0);
 }
@@ -117,4 +168,79 @@ void render(uint32_t time) {
 // amount if milliseconds elapsed since the start of your game
 //
 void update(uint32_t time) {
+    dt = (time - lastTime) / 1000.0;
+    lastTime = time;
+
+    if (state == 0) {
+        if (buttons.pressed & Button::A) {
+            state = 1;
+            start_game();
+        }
+    }
+    else if (state == 1) {
+        if (player.alive) {
+            if ((buttons.pressed & Button::A)) {
+                player.yVelocity = JUMP_VELOCITY;
+                player.started = true;
+            }
+        }
+        
+
+        if (player.started) {
+            player.yVelocity -= GRAVITY * dt;
+
+            player.yPosition -= player.yVelocity * dt;
+
+            if (player.alive) {
+                for (int i = 0; i < logs.size(); i++) {
+                    logs.at(i).xPosition -= LOG_SPEED * dt;
+
+                    if (logs.at(i).xPosition < PLAYER_X && !logs.at(i).passed) {
+                        // logs.at(i).xPosition + SPRITE_SIZE < PLAYER_X - (SPRITE_SIZE / 2) && !logs.at(i).passed
+                        // Note: commented line above only is true if player has completely passed the log (left edge of player is > right edge of log). We may want to give the player a point if they get halfway across log...
+                        logs.at(i).passed = true;
+                        player.score++;
+                    }
+
+                    if ((logs.at(i).xPosition - SPRITE_SIZE) < (PLAYER_X + SPRITE_SIZE / 2) && (logs.at(i).xPosition + SPRITE_SIZE) > (PLAYER_X + SPRITE_SIZE / 2)) {
+                        if (get_min_y(logs.at(i).gapPosition) < (player.yPosition - SPRITE_SIZE / 2) && get_max_y(logs.at(i).gapPosition) > (player.yPosition + SPRITE_SIZE / 2)) {
+                            
+                        }
+                        else {
+                            player.alive = false;
+                            player.yVelocity = 0;
+                        }
+                    }
+                }
+
+                logSpawnTimer -= LOG_SPEED * dt;
+
+                if (logSpawnTimer <= 0) {
+                    logs.push_back(generate_log());
+                    logSpawnTimer = LOG_SPAWN - player.score * 2;
+                    if (logSpawnTimer < LOG_SPAWN_MIN) {
+                        logSpawnTimer = LOG_SPAWN_MIN;
+                    }
+                }
+
+                if (logs.size() > 0) {
+                    if (logs.at(0).xPosition < -SPRITE_SIZE) {
+                        logs.erase(logs.begin());
+                    }
+                }
+            }
+
+            if (player.yPosition + SPRITE_SIZE / 2 > SCREEN_HEIGHT) {
+                player.alive = false;
+                state = 2;
+                player.yPosition = SCREEN_HEIGHT - SPRITE_SIZE / 2;
+            }
+        }
+    }
+    else if (state == 2) {
+        if (buttons.pressed & Button::A) {
+            state = 1;
+            start_game();
+        }
+    }
 }
