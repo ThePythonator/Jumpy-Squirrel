@@ -9,7 +9,7 @@
 #define PLAYER_X 32
 
 #define JUMP_VELOCITY 150
-#define GRAVITY 450
+#define GRAVITY 500
 
 #define MAX_VELOCITY 300
 
