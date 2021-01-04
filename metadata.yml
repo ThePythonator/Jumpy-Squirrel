@@ -2,8 +2,8 @@ title: Jumpy Squirrel
 description: Squirrels can fly.
 author: ThePythonator
 splash:
-  file: assets/no-image.png
+  file: assets/image.png
 icon:
-  file: assets/no-icon.png
+  file: assets/icon.png
 version: v0.0.1
 

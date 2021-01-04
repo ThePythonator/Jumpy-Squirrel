@@ -42,7 +42,7 @@ struct Log {
 
 
 int state = 0;
-double dt;
+float dt;
 uint32_t lastTime = 0;
 
 float offset = 0;
@@ -105,10 +105,10 @@ Log generate_log() {
 }
 
 void render_player(Squirrel player) {
-    int index = 10; // need to get animation frame + 10
+    int index = 11; // need to get animation frame + 10
 
-    //screen.sprite(index, Point(PLAYER_X - SPRITE_SIZE / 2, player.yPosition - SPRITE_SIZE / 2));
-    screen.rectangle(Rect(PLAYER_X - SPRITE_SIZE / 2, player.yPosition - SPRITE_SIZE / 2, 8, 8));
+    screen.sprite(index, Point(PLAYER_X - SPRITE_SIZE / 2, player.yPosition - SPRITE_SIZE / 2));
+    //screen.rectangle(Rect(PLAYER_X - SPRITE_SIZE / 2, player.yPosition - SPRITE_SIZE / 2, 8, 8));
 }
 
 void render_log(Log log) {
