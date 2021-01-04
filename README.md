@@ -1,7 +1,7 @@
 
 # Jumpy Squirrel
 
-![Build](https://github.com/32blit/32blit-boilerplate/workflows/Build/badge.svg)
+![Build](https://github.com/ThePythonator/Jumpy-Squirrel/workflows/Build/badge.svg)
 
 Squirrels can now fly. It's technically jumping.
 
