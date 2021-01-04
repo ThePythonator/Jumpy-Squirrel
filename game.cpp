@@ -13,9 +13,9 @@
 
 #define MAX_VELOCITY 300
 
-#define LOG_SPEED 30
-#define LOG_SPAWN 100
-#define LOG_SPAWN_MIN 60
+#define SCROLL_SPEED 30
+#define LOG_SPAWN_GAP 100
+#define LOG_MIN_GAP 60
 
 #define GAP_SIZE 3
 
@@ -45,9 +45,9 @@ int state = 0;
 double dt;
 uint32_t lastTime = 0;
 
-float logSpawnTimer = 0;
-
 float offset = 0;
+
+int treeNumber = 0;
 
 Squirrel player;
 std::vector<Log> logs;
@@ -71,11 +71,13 @@ float max(float a, float b) {
 }
 
 Log generate_log() {
+    treeNumber++;
+
     Log log;
     
     log.gapPosition = (rand() % ((SCREEN_HEIGHT / SPRITE_SIZE) - (GAP_SIZE * 2))) + GAP_SIZE;
 
-    log.xPosition = SCREEN_WIDTH + SPRITE_SIZE;
+    log.xPosition = (1 + treeNumber) * max(LOG_SPAWN_GAP - treeNumber * 2, LOG_MIN_GAP);//SCREEN_WIDTH + SPRITE_SIZE;
 
     log.passed = false;
 
@@ -114,15 +116,20 @@ void render_log(Log log) {
         int index = log.images[i];
 
         if (index != -1) {
-            screen.sprite(index, Point((int)log.xPosition - 8, i * SPRITE_SIZE));
-            screen.sprite(index + 1, Point((int)log.xPosition, i * SPRITE_SIZE));
+            screen.sprite(index, Point((int)log.xPosition - 8 - offset, i * SPRITE_SIZE));
+            screen.sprite(index + 1, Point((int)log.xPosition - offset, i * SPRITE_SIZE));
         }
     }
 }
 
 void render_tiles() {
-    for (int i = -1; i < (SCREEN_WIDTH / SPRITE_SIZE); i++) {
-        screen.sprite(10, Point(offset + i * SPRITE_SIZE, SCREEN_HEIGHT - SPRITE_SIZE));
+    float littleOffset = offset;
+    while (littleOffset >= SPRITE_SIZE) {
+        littleOffset -= SPRITE_SIZE;
+    }
+
+    for (int i = -1; i < (SCREEN_WIDTH / SPRITE_SIZE) + 1; i++) {
+        screen.sprite(10, Point(i * SPRITE_SIZE - littleOffset, SCREEN_HEIGHT - SPRITE_SIZE));
     }
 }
 
@@ -139,9 +146,10 @@ void start_game() {
     player.started = false;
     player.score = 0;
     player.alive = true;
-    logSpawnTimer = 0;
     offset = 0;
+    treeNumber = 0;
     logs.clear();
+    logs.push_back(generate_log());
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -174,6 +182,8 @@ void render(uint32_t time) {
     screen.blit(background, Rect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT), Point(0, 0), false);
 
     if (state == 0) {
+        render_tiles();
+
         fade_background();
 
         screen.text("Jumpy Squirrel", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 3), true, TextAlign::center_center);
@@ -181,7 +191,7 @@ void render(uint32_t time) {
         screen.text("Press A to Start", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 2 / 3), true, TextAlign::center_center);
     }
     else if (state == 1) {
-        //render_tiles();
+        render_tiles();
 
         for (int i = 0; i < logs.size(); i++) {
             render_log(logs.at(i));
@@ -192,7 +202,7 @@ void render(uint32_t time) {
         screen.text(std::to_string(player.score), minimal_font, Point(SCREEN_WIDTH / 2, 8), true, TextAlign::center_center);
     }
     else if (state == 2) {
-        //render_tiles();
+        render_tiles();
 
         for (int i = 0; i < logs.size(); i++) {
             render_log(logs.at(i));
@@ -245,17 +255,18 @@ void update(uint32_t time) {
             player.yVelocity = max(player.yVelocity, -MAX_VELOCITY);
 
             if (player.alive) {
-                for (int i = 0; i < logs.size(); i++) {
-                    logs.at(i).xPosition -= LOG_SPEED * dt;
+                offset += SCROLL_SPEED * dt;
 
-                    if (logs.at(i).xPosition < PLAYER_X && !logs.at(i).passed) {
+                for (int i = 0; i < logs.size(); i++) {
+
+                    if (logs.at(i).xPosition - offset < PLAYER_X && !logs.at(i).passed) {
                         // logs.at(i).xPosition + SPRITE_SIZE < PLAYER_X - (SPRITE_SIZE / 2) && !logs.at(i).passed
                         // Note: commented line above only is true if player has completely passed the log (left edge of player is > right edge of log). We may want to give the player a point if they get halfway across log...
                         logs.at(i).passed = true;
                         player.score++;
                     }
 
-                    if ((logs.at(i).xPosition - SPRITE_SIZE) < (PLAYER_X + SPRITE_SIZE / 2) && (logs.at(i).xPosition + SPRITE_SIZE) > (PLAYER_X - SPRITE_SIZE / 2)) {
+                    if ((logs.at(i).xPosition - SPRITE_SIZE - offset) < (PLAYER_X + SPRITE_SIZE / 2) && (logs.at(i).xPosition + SPRITE_SIZE - offset) > (PLAYER_X - SPRITE_SIZE / 2)) {
                         if (get_min_y(logs.at(i).gapPosition) < (player.yPosition - SPRITE_SIZE / 2) && get_max_y(logs.at(i).gapPosition) > (player.yPosition + SPRITE_SIZE / 2)) {
                             
                         }
@@ -266,19 +277,15 @@ void update(uint32_t time) {
                     }
                 }
 
-                logSpawnTimer -= LOG_SPEED * dt;
+                //logSpawnTimer -= SCROLL_SPEED * dt;
                 /*offset -= LOG_SPEED * dt;
 
                 if (offset < -SPRITE_SIZE) {
                     offset += SPRITE_SIZE;
                 }*/
 
-                if (logSpawnTimer <= 0) {
+                if (logs.at(logs.size() - 1).xPosition - offset < SCREEN_WIDTH + SPRITE_SIZE) {
                     logs.push_back(generate_log());
-                    logSpawnTimer = LOG_SPAWN - player.score * 2;
-                    if (logSpawnTimer < LOG_SPAWN_MIN) {
-                        logSpawnTimer = LOG_SPAWN_MIN;
-                    }
                 }
 
                 if (logs.size() > 0) {
