@@ -8,6 +8,11 @@
 
 #define PLAYER_X 32
 
+#define PLAYER_UP 20
+#define PLAYER_DOWN 20
+
+//                  ^ maybe 30?
+
 #define JUMP_VELOCITY 150
 #define GRAVITY 500
 
@@ -19,6 +24,12 @@
 
 #define GAP_SIZE 3
 
+#define TOLERANCE 1
+
+#define GROUND 5
+
+#define DEAD_TIME 0.4
+
 using namespace blit;
 
 struct Squirrel {
@@ -27,8 +38,11 @@ struct Squirrel {
 
     bool alive;
     bool started;
+    bool onGround;
 
     int score;
+
+    float deadTimer;
 };
 
 struct Log {
@@ -105,7 +119,18 @@ Log generate_log() {
 }
 
 void render_player(Squirrel player) {
-    int index = 11; // need to get animation frame + 10
+    int index = 12; // need to get animation frame
+
+    if (player.onGround) {
+        index = 15;
+    }
+    else if (player.yVelocity < -PLAYER_DOWN) {
+        index = 14;
+    }
+    else if (player.yVelocity > PLAYER_UP) {
+        index = 13;
+    }
+    
 
     screen.sprite(index, Point(PLAYER_X - SPRITE_SIZE / 2, player.yPosition - SPRITE_SIZE / 2));
     //screen.rectangle(Rect(PLAYER_X - SPRITE_SIZE / 2, player.yPosition - SPRITE_SIZE / 2, 8, 8));
@@ -140,12 +165,13 @@ void fade_background() {
 }
 
 void start_game() {
-    //player.alive = true;
     player.yPosition = SCREEN_HEIGHT / 2;
     player.yVelocity = 0;
+    player.deadTimer = 0;
     player.started = false;
     player.score = 0;
     player.alive = true;
+    player.onGround = false;
     offset = 0;
     treeNumber = 0;
     logs.clear();
@@ -186,7 +212,7 @@ void render(uint32_t time) {
 
         fade_background();
 
-        screen.text("Jumpy Squirrel", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 3), true, TextAlign::center_center);
+        screen.text("Jumpy Squirrel", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 4), true, TextAlign::center_center);
 
         screen.text("Press A to Start", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 2 / 3), true, TextAlign::center_center);
     }
@@ -212,9 +238,9 @@ void render(uint32_t time) {
 
         fade_background();
 
-        screen.text(std::to_string(player.score), minimal_font, Point(SCREEN_WIDTH / 2, 8), true, TextAlign::center_center);
+        screen.text("You scored "+std::to_string(player.score), minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 3), true, TextAlign::center_center);
 
-        screen.text("You died", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 3), true, TextAlign::center_center);
+        screen.text("You died", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 4), true, TextAlign::center_center);
 
         screen.text("Press A to Retry", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 2 / 3), true, TextAlign::center_center);
     }
@@ -267,7 +293,7 @@ void update(uint32_t time) {
                     }
 
                     if ((logs.at(i).xPosition - SPRITE_SIZE - offset) < (PLAYER_X + SPRITE_SIZE / 2) && (logs.at(i).xPosition + SPRITE_SIZE - offset) > (PLAYER_X - SPRITE_SIZE / 2)) {
-                        if (get_min_y(logs.at(i).gapPosition) < (player.yPosition - SPRITE_SIZE / 2) && get_max_y(logs.at(i).gapPosition) > (player.yPosition + SPRITE_SIZE / 2)) {
+                        if (get_min_y(logs.at(i).gapPosition) - TOLERANCE < (player.yPosition - SPRITE_SIZE / 2) && get_max_y(logs.at(i).gapPosition) + TOLERANCE > (player.yPosition + SPRITE_SIZE / 2)) {
                             
                         }
                         else {
@@ -276,13 +302,6 @@ void update(uint32_t time) {
                         }
                     }
                 }
-
-                //logSpawnTimer -= SCROLL_SPEED * dt;
-                /*offset -= LOG_SPEED * dt;
-
-                if (offset < -SPRITE_SIZE) {
-                    offset += SPRITE_SIZE;
-                }*/
 
                 if (logs.at(logs.size() - 1).xPosition - offset < SCREEN_WIDTH + SPRITE_SIZE) {
                     logs.push_back(generate_log());
@@ -295,10 +314,16 @@ void update(uint32_t time) {
                 }
             }
 
-            if (player.yPosition + SPRITE_SIZE / 2 > SCREEN_HEIGHT) {
+
+            if (player.yPosition + (SPRITE_SIZE / 2) > SCREEN_HEIGHT - GROUND) {
                 player.alive = false;
+                player.yPosition = SCREEN_HEIGHT - (SPRITE_SIZE / 2) - GROUND;
+                player.onGround = true;
+                player.deadTimer += dt;
+            }
+
+            if (player.deadTimer >= DEAD_TIME) {
                 state = 2;
-                player.yPosition = SCREEN_HEIGHT - SPRITE_SIZE / 2;
             }
         }
     }
