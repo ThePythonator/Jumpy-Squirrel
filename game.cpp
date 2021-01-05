@@ -59,6 +59,8 @@ int state = 0;
 float dt;
 uint32_t lastTime = 0;
 
+int localHighscore = 0;
+
 float offset = 0;
 
 int treeNumber = 0;
@@ -158,6 +160,11 @@ void render_tiles() {
     }
 }
 
+void render_title() {
+    screen.blit(screen.sprites, Rect(0, 96, 65, 16), Point(0, 0));
+    screen.blit(screen.sprites, Rect(0, 112, 76, 16), Point(0, 16));
+}
+
 void fade_background() {
     screen.pen = Pen(0, 0, 0, 150);
     screen.clear();
@@ -212,7 +219,9 @@ void render(uint32_t time) {
 
         fade_background();
 
-        screen.text("Jumpy Squirrel", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 4), true, TextAlign::center_center);
+        //render_title();
+
+        screen.text("Jumpy Squirrel", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 3), true, TextAlign::center_center); // change to custom icon
 
         screen.text("Press A to Start", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 2 / 3), true, TextAlign::center_center);
     }
@@ -238,9 +247,9 @@ void render(uint32_t time) {
 
         fade_background();
 
-        screen.text("You scored "+std::to_string(player.score), minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 3), true, TextAlign::center_center);
+        screen.text("Score: "+std::to_string(player.score), minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 3), true, TextAlign::center_center);
 
-        screen.text("You died", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 4), true, TextAlign::center_center);
+        screen.text("Highscore: " + std::to_string(localHighscore), minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 1 / 2), true, TextAlign::center_center);
 
         screen.text("Press A to Retry", minimal_font, Point(SCREEN_WIDTH / 2, SCREEN_HEIGHT * 2 / 3), true, TextAlign::center_center);
     }
@@ -324,6 +333,7 @@ void update(uint32_t time) {
 
             if (player.deadTimer >= DEAD_TIME) {
                 state = 2;
+                localHighscore = max(localHighscore, player.score);
             }
         }
     }
