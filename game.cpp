@@ -19,8 +19,8 @@
 #define MAX_VELOCITY 300
 
 #define SCROLL_SPEED 30
-#define LOG_SPAWN_GAP 100
-#define LOG_MIN_GAP 60
+#define LOG_SPAWN_GAP 110
+#define LOG_MIN_GAP 55
 
 #define GAP_SIZE 3
 
@@ -64,6 +64,7 @@ int localHighscore = 0;
 float offset = 0;
 
 int treeNumber = 0;
+int treeGap = 0;
 
 Squirrel player;
 std::vector<Log> logs;
@@ -88,12 +89,13 @@ float max(float a, float b) {
 
 Log generate_log() {
     treeNumber++;
+    treeGap += max(LOG_SPAWN_GAP - treeNumber * 2, LOG_MIN_GAP);
 
     Log log;
     
     log.gapPosition = (rand() % ((SCREEN_HEIGHT / SPRITE_SIZE) - (GAP_SIZE * 2))) + GAP_SIZE;
 
-    log.xPosition = (1 + treeNumber) * max(LOG_SPAWN_GAP - treeNumber * 2, LOG_MIN_GAP);//SCREEN_WIDTH + SPRITE_SIZE;
+    log.xPosition = treeGap;
 
     log.passed = false;
 
@@ -181,6 +183,7 @@ void start_game() {
     player.onGround = false;
     offset = 0;
     treeNumber = 0;
+    treeGap = SCREEN_WIDTH / 2;
     logs.clear();
     logs.push_back(generate_log());
 }
@@ -301,7 +304,7 @@ void update(uint32_t time) {
                         player.score++;
                     }
 
-                    if ((logs.at(i).xPosition - SPRITE_SIZE - offset) < (PLAYER_X + SPRITE_SIZE / 2) && (logs.at(i).xPosition + SPRITE_SIZE - offset) > (PLAYER_X - SPRITE_SIZE / 2)) {
+                    if ((logs.at(i).xPosition - SPRITE_SIZE - offset) < (PLAYER_X + SPRITE_SIZE / 2) && (logs.at(i).xPosition + SPRITE_SIZE - offset - TOLERANCE) > (PLAYER_X - SPRITE_SIZE / 2)) {
                         if (get_min_y(logs.at(i).gapPosition) - TOLERANCE < (player.yPosition - SPRITE_SIZE / 2) && get_max_y(logs.at(i).gapPosition) + TOLERANCE > (player.yPosition + SPRITE_SIZE / 2)) {
                             
                         }
