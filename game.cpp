@@ -32,6 +32,10 @@
 
 using namespace blit;
 
+struct SaveData {
+    int score;
+};
+
 struct Squirrel {
     float yPosition;
     float yVelocity;
@@ -60,6 +64,8 @@ float dt;
 uint32_t lastTime = 0;
 
 int localHighscore = 0;
+
+SaveData saveData;
 
 float offset = 0;
 
@@ -196,7 +202,17 @@ void start_game() {
 //
 void init() {
     set_screen_mode(ScreenMode::lores);
-    screen.sprites = SpriteSheet::load(asset_sprites);
+    screen.sprites = Surface::load(asset_sprites);
+
+    // Attempt to load the first save slot.
+    if (read_save(saveData)) {
+        // Loaded sucessfully!
+        localHighscore = saveData.score;
+    }
+    else {
+        // No save file or it failed to load, set up some defaults.
+        saveData.score = 0;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -337,6 +353,8 @@ void update(uint32_t time) {
             if (player.deadTimer >= DEAD_TIME) {
                 state = 2;
                 localHighscore = max(localHighscore, player.score);
+                saveData.score = localHighscore;
+                write_save(saveData); // write highscore
             }
         }
     }
